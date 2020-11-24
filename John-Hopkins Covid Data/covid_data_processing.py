@@ -8,15 +8,17 @@ confirmed_url = "time_series_covid19_confirmed_global.csv"
 dead_url = "time_series_covid19_deaths_global.csv"
 
 '''
-Aggregating US Covid cases and deaths
+Aggregating US Covid cases
 '''
-#confirmed cases
+#Confirmed cases
 df = pd.read_csv(base_url + confirmed_url)
+confirmed_copy = df.copy()
 df = df.drop(["Lat", "Long"], axis=1) #drop latitude and longitude
 confirmed = df.drop("Province/State", axis=1)  # take only countries
 
 #Covid deaths
 df = pd.read_csv(base_url + dead_url)
+dead_copy = df.copy()
 df = df.drop(["Lat", "Long"], axis=1) #drop latitude and longitude
 dead = df.drop("Province/State", axis=1) # take only countries (no territories)
 
@@ -70,5 +72,25 @@ data['Deaths Increase'] = data['Deaths Increase'].replace(inf,0)
 data.to_csv("us-aggregated.csv", index=False)
 
 '''
-Aggregating World Covid cases and deaths
+Aggregating World Covid cases
 '''
+confirmed = confirmed_copy.copy().drop(
+    ["Lat", "Long", "Province/State", "Country/Region"], axis=1
+)
+dead = dead_copy.copy().drop(
+    ["Lat", "Long", "Province/State", "Country/Region"], axis=1
+)
+
+df = pd.DataFrame()
+df["Confirmed Cases"] = confirmed.sum()
+df["Deaths"] = dead.sum()
+df["Date"] = df.index
+df["Date"] = df["Date"].map(adjust_date)
+df = df.reset_index(drop=True)
+df = df[["Date", "Confirmed Cases", "Deaths"]]
+
+df['Cases Increase'] = df['Confirmed Cases'].pct_change(1).fillna(0)
+df['Deaths Increase'] = df['Deaths'].pct_change(1).fillna(0)
+df['Deaths Increase'] = df['Deaths Increase'].replace(inf,0)
+
+df.to_csv("worldwide-aggregated.csv", index=False)
